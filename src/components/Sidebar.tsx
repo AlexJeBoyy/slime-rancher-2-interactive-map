@@ -1,5 +1,6 @@
 import { AiFillDiscord, AiFillGithub } from "react-icons/ai";
 import { ClearUserPinsButton, ExportUserPinsButton, ImportUserPinsButton, SidebarPins } from "./UserPins";
+import { ExportPlotPlannerButton, ImportPlotPlannerButton, ClearPlotPlannerButton } from "./planner/PlotPlannerData";
 import { CurrentMapContext, MapType } from "../CurrentMapContext";
 import { ExportUserDataButton, ImportUserDataButton } from "./UserData";
 import { FaChevronRight, FaMoon, FaSun } from "react-icons/fa";
@@ -131,6 +132,14 @@ export default function Sidebar({
                     <div className="flex flex-col md:flex-row justify-between gap-4 lg:gap-6 mb-4">
                         <ExportUserDataButton />
                         <ImportUserDataButton />
+                    </div>
+
+                    <hr />
+
+                    <div className="flex flex-col md:flex-row justify-between gap-4 lg:gap-6 mb-4">
+                        <ExportPlotPlannerButton />
+                        <ImportPlotPlannerButton />
+                        <ClearPlotPlannerButton />
                     </div>
                 </div>
             </div>
