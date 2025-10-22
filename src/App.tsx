@@ -1,7 +1,8 @@
 import { CurrentMapContext, MapType } from "./CurrentMapContext";
 import { LatLngBoundsExpression, LatLngExpression, LatLngTuple, icon } from "leaflet";
 import { LayerGroup, LayersControl, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { LocalStoragePin, Pin } from "./types";
+import { LocalStoragePin, LocalStorageSitePlan, Pin } from "./types";
+import { getStoredPlotPlans } from "./util";
 import { useContext, useEffect, useState } from "react";
 import { FaCode } from "react-icons/fa6";
 import { GordoIcons } from "./components/GordoIcon";
@@ -132,6 +133,9 @@ function App() {
     const [show_log, setShowLog] = useState(false);
     const [current_log, setCurrentLog] = useState(<></>);
     const [selected_pin, setSelectedPin] = useState<Pin | undefined>(undefined);
+    const [plots_data, setPlotData] = useState<LocalStorageSitePlan[]>(
+        getStoredPlotPlans()
+    );
     const [advanced_infos, setAdvancedInfos] = useState(false);
 
     useEffect(() => {
@@ -226,6 +230,8 @@ function App() {
                 setSelectedPin={setSelectedPin}
                 user_pins={user_pins}
                 setUserPins={setUserPins}
+                plots_data={plots_data}
+                setPlotData={setPlotData}
             />
 
             <MapContainer

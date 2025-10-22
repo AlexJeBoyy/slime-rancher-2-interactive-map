@@ -4,7 +4,7 @@ import { ExportPlotPlannerButton, ImportPlotPlannerButton, ClearPlotPlannerButto
 import { CurrentMapContext, MapType } from "../CurrentMapContext";
 import { ExportUserDataButton, ImportUserDataButton } from "./UserData";
 import { FaChevronRight, FaMoon, FaSun } from "react-icons/fa";
-import { LocalStoragePin, Pin } from "../types";
+import { LocalStoragePin, LocalStorageSitePlan, Pin } from "../types";
 import React, { useContext, useEffect, useState } from "react";
 import { discord_link, github_link } from "../globals";
 import CollectablesTracker from "./CollectablesTracker";
@@ -23,11 +23,15 @@ export default function Sidebar({
     setSelectedPin,
     user_pins,
     setUserPins,
+    plots_data,
+    setPlotData,
 }: {
     selected_pin: Pin | undefined,
     setSelectedPin: React.Dispatch<React.SetStateAction<Pin | undefined>>
     user_pins: LocalStoragePin[],
     setUserPins: React.Dispatch<React.SetStateAction<LocalStoragePin[]>>
+    plots_data: LocalStorageSitePlan[],
+    setPlotData: React.Dispatch<React.SetStateAction<LocalStorageSitePlan[]>>
 }) {
     const [showSidebar, setShowSidebar] = useState(false);
     const [darkMode, setDarkMode] = useState(getOriginalTheme());
@@ -137,9 +141,11 @@ export default function Sidebar({
                     <hr />
 
                     <div className="flex flex-col md:flex-row justify-between gap-4 lg:gap-6 mb-4">
-                        <ExportPlotPlannerButton />
-                        <ImportPlotPlannerButton />
-                        <ClearPlotPlannerButton />
+    
+    
+                        <ExportPlotPlannerButton plots_data={plots_data}/>
+                        <ImportPlotPlannerButton setPlotData={setPlotData} />
+                        <ClearPlotPlannerButton setPlotData={setPlotData} />
                     </div>
                 </div>
             </div>

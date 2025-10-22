@@ -92,9 +92,9 @@ export function PlotPlanner({
     const [plotPlan, setPlotPlan] = useState<LocalStoragePlotPlan>(retrievedPlotPlan);
     const [plotType, setplotType] = useState<PlotOptions | undefined>(getSelectedPlotTypeFromRetrievedPlotPlan);
     const [icons, setIcons] = useState<PlannerIcons>(getIconsFromRetrievedPlan);
-
+//Debug purposes
     const plotPlanLogging = (newPlotPlan: LocalStoragePlotPlan) => {
-        console.log('Plot item placed:', {
+        console.debug('Plot item placed:', {
             plot: plot,
             plotID: newPlotPlan.selectedPlotType,
             slotsA: newPlotPlan.selectedOptionA,
