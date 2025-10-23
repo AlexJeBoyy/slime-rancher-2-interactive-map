@@ -7,7 +7,7 @@ import { FaCode } from "react-icons/fa6";
 import { GordoIcons } from "./components/GordoIcon";
 import { LockedDoorIcons } from "./components/LockedDoorIcon";
 import { MapNodeIcons } from "./components/MapNodeIcon";
-import { MapUserPins } from "./components/manager/UserData";
+import { MapUserPins } from "./components/manager/userData";
 import { PlotPlanners } from "./components/planner/PlotPlanner";
 import { ResearchDroneIcons } from "./components/ResearchDroneIcon";
 import { ShadowDoorIcons } from "./components/ShadowDoorIcon";
