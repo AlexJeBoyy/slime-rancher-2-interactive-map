@@ -93,23 +93,11 @@ export function PlotPlanner({
     const [plotType, setplotType] = useState<PlotOptions | undefined>(getSelectedPlotTypeFromRetrievedPlotPlan);
     const [icons, setIcons] = useState<PlannerIcons>(getIconsFromRetrievedPlan);
 
-    const plotPlanLogging = (newPlotPlan: LocalStoragePlotPlan) => {
-        console.log('Plot item placed:', {
-            plot: plot,
-            plotID: newPlotPlan.selectedPlotType,
-            slotsA: newPlotPlan.selectedOptionA,
-            slotsB: newPlotPlan.selectedOptionB,
-            upgrades: newPlotPlan.selectedUpgrades,
-        });
-        setPlotPlan(newPlotPlan);
-    };
-
     const doubleIconYOffset = 0.35;
 
     function handlePlotPlanChange(newPlotPlan: LocalStoragePlotPlan) {
         setPlotPlan(newPlotPlan);
         handlePlotPlanned(site, plot, newPlotPlan);
-        plotPlanLogging(newPlotPlan);
         retrievedPlotPlan = newPlotPlan;
     }
 
