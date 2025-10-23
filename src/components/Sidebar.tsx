@@ -1,6 +1,6 @@
 import { AiFillDiscord, AiFillGithub } from "react-icons/ai";
 import { SidebarPins } from "./UserPins";
-import GenericDataButton from "./manager/UserData";
+import GenericDataButton from "./manager/userData";
 import { CurrentMapContext, MapType } from "../CurrentMapContext";
 import { FaChevronRight, FaMoon, FaSun } from "react-icons/fa";
 import { LocalStoragePin, LocalStorageSitePlan, Pin } from "../types";
