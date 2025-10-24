@@ -1,8 +1,7 @@
 import { AiFillDiscord, AiFillGithub } from "react-icons/ai";
-import { ClearUserPinsButton, ExportUserPinsButton, ImportUserPinsButton, SidebarPins } from "./UserPins";
-import { ExportPlotPlannerButton, ImportPlotPlannerButton, ClearPlotPlannerButton } from "./planner/PlotPlannerData";
+import { SidebarPins } from "./UserPins";
+import GenericDataButton from "./manager/userData";
 import { CurrentMapContext, MapType } from "../CurrentMapContext";
-import { ExportUserDataButton, ImportUserDataButton } from "./UserData";
 import { FaChevronRight, FaMoon, FaSun } from "react-icons/fa";
 import { LocalStoragePin, LocalStorageSitePlan, Pin } from "../types";
 import React, { useContext, useEffect, useState } from "react";
@@ -21,17 +20,17 @@ function getOriginalTheme() {
 export default function Sidebar({
     selected_pin,
     setSelectedPin,
-    user_pins,
     setUserPins,
-    plots_data,
     setPlotData,
+    setFound,
 }: {
     selected_pin: Pin | undefined,
-    setSelectedPin: React.Dispatch<React.SetStateAction<Pin | undefined>>
+    setSelectedPin: React.Dispatch<React.SetStateAction<Pin | undefined>>,
     user_pins: LocalStoragePin[],
-    setUserPins: React.Dispatch<React.SetStateAction<LocalStoragePin[]>>
-    plots_data: LocalStorageSitePlan[],
-    setPlotData: React.Dispatch<React.SetStateAction<LocalStorageSitePlan[]>>
+    setUserPins: React.Dispatch<React.SetStateAction<LocalStoragePin[]>>,
+    plots_data?: LocalStorageSitePlan[],
+    setPlotData?: React.Dispatch<React.SetStateAction<LocalStorageSitePlan[]>>,
+    setFound?: React.Dispatch<React.SetStateAction<any>>,
 }) {
     const [showSidebar, setShowSidebar] = useState(false);
     const [darkMode, setDarkMode] = useState(getOriginalTheme());
@@ -126,27 +125,43 @@ export default function Sidebar({
                     <hr />
 
                     <div className="flex flex-col md:flex-row justify-between gap-4 lg:gap-6 mb-4">
-                        <ExportUserPinsButton user_pins={user_pins} />
-                        <ImportUserPinsButton setUserPins={setUserPins} />
-                        <ClearUserPinsButton setUserPins={setUserPins} />
+                        <GenericDataButton dataset="pins" action="export" label="Export Pins" />
+                        <GenericDataButton dataset="pins" action="import" setUserPins={setUserPins} label="Import Pins" />
+                        <GenericDataButton dataset="pins" action="clear" setUserPins={setUserPins} label="Clear Pins" />
                     </div>
 
                     <hr />
 
                     <div className="flex flex-col md:flex-row justify-between gap-4 lg:gap-6 mb-4">
-                        <ExportUserDataButton />
-                        <ImportUserDataButton />
+                        <GenericDataButton dataset="found" action="export" label="Export Found Data" />
+                        <GenericDataButton dataset="found" action="import" setFound={setFound} label="Import Found Data" />
                     </div>
 
                     <hr />
 
                     <div className="flex flex-col md:flex-row justify-between gap-4 lg:gap-6 mb-4">
-    
-    
-                        <ExportPlotPlannerButton plots_data={plots_data}/>
-                        <ImportPlotPlannerButton setPlotData={setPlotData} />
-                        <ClearPlotPlannerButton setPlotData={setPlotData} />
+                        <GenericDataButton dataset="plots" action="export" label="Export Plot Plans" />
+                        <GenericDataButton dataset="plots" action="import" setPlotData={setPlotData} label="Import Plot Plans" />
+                        <GenericDataButton dataset="plots" action="clear" setPlotData={setPlotData} label="Clear Plot Plans" />
                     </div>
+
+                    <hr />
+
+                    <div className="flex flex-col md:flex-row justify-between gap-4 lg:gap-6 mb-4">
+                        <GenericDataButton dataset="all" action="export" label="Export All" />
+                        <GenericDataButton
+                            dataset="all"
+                            action="import"
+                            setPlotData={setPlotData}
+                            setUserPins={setUserPins}
+                            setFound={setFound}
+                            label="Import All"
+                        />
+                    </div>
+
+                    <hr />
+
+                    
                 </div>
             </div>
 
