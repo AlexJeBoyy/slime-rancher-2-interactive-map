@@ -168,6 +168,8 @@ function actionToIcon(action: "export" | "import" | "clear") {
 }
 
 function datasetToString(dataset: DataSet[]): string {
+    if (dataset.length === 0) return "";
+    if (dataset.length === 1) return dataset[0].charAt(0).toUpperCase() + dataset[0].slice(1);
     return dataset.slice(0, -1).map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")
         + " and " + dataset.slice(-1).map(d => d.charAt(0).toUpperCase() + d.slice(1)).join("");
 }
