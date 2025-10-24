@@ -1,5 +1,6 @@
-import React, { useContext } from "react";
-import { getStoredPlotPlans } from "../../util";
+import { FaFileExport, FaFileImport, FaTrashCan } from "react-icons/fa6";
+import { Found, FoundContext } from "../../FoundContext";
+import { LocalStoragePin, LocalStorageSitePlan, Pin } from "../../types";
 import {
     gordo_ls_key,
     locked_door_ls_key,
@@ -9,8 +10,9 @@ import {
     stabilizing_gate_ls_key,
     treasure_pod_ls_key
 } from "../../globals";
-import { LocalStoragePin, LocalStorageSitePlan, UserData, Pin } from "../../types";
 import { CurrentMapContext } from "../../CurrentMapContext";
+import { getStoredPlotPlans } from "../../util";
+import { useContext } from "react";
 import { useMapEvents } from "react-leaflet";
 
 /* --- Constants --- */
@@ -26,8 +28,16 @@ const FOUND_KEYS = [
     shadow_door_ls_key,
 ] as const;
 
+export enum DataSet {
+    Plots = "plots",
+    Pins = "pins",
+    Found = "found",
+}
+
+type DataType = { [key in DataSet]: LocalStoragePin[] | LocalStorageSitePlan[] | Record<string, unknown> | null };
+
 /* --- Helpers --- */
-function downloadJSON(filename: string, data: any) {
+function downloadJSON(filename: string, data: DataType) {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -40,48 +50,29 @@ function downloadJSON(filename: string, data: any) {
 }
 
 /* --- Export functions --- */
-export function exportPlots() {
-    const data = getStoredPlotPlans();
-    downloadJSON("plot_plans.json", data);
-}
 
-export function exportPins() {
-    const raw = localStorage.getItem(PINS_KEY) ?? "[]";
-    let data: unknown;
-    try { data = JSON.parse(raw); } catch { data = []; }
-    downloadJSON("user_pins.json", data);
-}
-
-export function exportFoundData() {
-    const out: Record<string, unknown> = {};
-    for (const key of FOUND_KEYS) {
-        out[key] = JSON.parse(localStorage.getItem(key) ?? "[]");
-    }
-    downloadJSON("found_data.json", out);
-}
-
-export function exportAll() {
-    const all = {
-        plots: getStoredPlotPlans(),
-        pins: JSON.parse(localStorage.getItem(PINS_KEY) ?? "[]"),
-        found: FOUND_KEYS.reduce((acc: Record<string, unknown>, k) => {
+function exportFilter(filter: DataSet[]) {
+    const all: DataType = {
+        plots: filter.includes(DataSet.Plots) ? getStoredPlotPlans() : [],
+        pins: filter.includes(DataSet.Pins) ? JSON.parse(localStorage.getItem(PINS_KEY) ?? "[]") : null,
+        found: filter.includes(DataSet.Found) ? FOUND_KEYS.reduce((acc: Record<string, unknown>, k) => {
             acc[k] = JSON.parse(localStorage.getItem(k) ?? "[]");
             return acc;
-        }, {})
+        }, {}) : null,
     };
     downloadJSON("sr2_interactivemap_backup.json", all);
 }
 
 /* --- Import validators --- */
-function isValidPlotExport(obj: any): obj is LocalStorageSitePlan[] {
+function isValidPlotExport(obj: unknown): obj is LocalStorageSitePlan[] {
     return Array.isArray(obj) && obj.every(item => item && typeof item.site === "string" && Array.isArray(item.plotPlans));
 }
 
-function isValidPinsExport(obj: any): obj is LocalStoragePin[] {
+function isValidPinsExport(obj: unknown): obj is LocalStoragePin[] {
     return Array.isArray(obj) && obj.every(p => p && typeof p.icon === "string" && p.pos && typeof p.pos.x === "number" && typeof p.pos.y === "number");
 }
 
-function isValidFoundExport(obj: unknown): obj is Record<string, any> {
+function isValidFoundExport(obj: unknown): obj is Record<string, unknown> {
     if (!obj || typeof obj !== "object") return false;
     const keys = Object.keys(obj);
     const foundKeyStrings = (FOUND_KEYS as readonly string[]);
@@ -89,124 +80,49 @@ function isValidFoundExport(obj: unknown): obj is Record<string, any> {
 }
 
 /* --- Import functions --- */
-export async function importPlotsFile(file: File, setPlotData?: React.Dispatch<React.SetStateAction<LocalStorageSitePlan[]>>) {
+async function importFilter(file: File, dataset: DataSet[]) {
     const text = await file.text();
     const parsed = JSON.parse(text);
-    if (!isValidPlotExport(parsed)) throw new Error("Invalid plot plans format.");
-    localStorage.setItem(PLOT_KEY, JSON.stringify(parsed));
-    if (typeof setPlotData === "function") {
-        try { setPlotData(parsed); } catch { window.location.reload(); }
-    } else {
-        window.location.reload();
+    if (parsed.plots && dataset.includes(DataSet.Plots) && isValidPlotExport(parsed.plots)) localStorage.setItem(PLOT_KEY, JSON.stringify(parsed.plots));
+    if (parsed.pins && dataset.includes(DataSet.Pins) && isValidPinsExport(parsed.pins)) localStorage.setItem(PINS_KEY, JSON.stringify(parsed.pins));
+    if (parsed.found && dataset.includes(DataSet.Found) && isValidFoundExport(parsed.found)) {
+        for (const k of FOUND_KEYS) if (parsed.found[k]) localStorage.setItem(k, JSON.stringify(parsed.found[k]));
     }
-}
-
-export async function importPinsFile(file: File, setUserPins?: React.Dispatch<React.SetStateAction<LocalStoragePin[]>>) {
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    if (!isValidPinsExport(parsed)) throw new Error("Invalid user pins format.");
-    localStorage.setItem(PINS_KEY, JSON.stringify(parsed));
-    if (typeof setUserPins === "function") {
-        try { setUserPins(parsed); } catch { window.location.reload(); }
-    } else {
-        window.location.reload();
-    }
-}
-
-/* Map localStorage keys to UserData property names */
-const LOCAL_TO_USERDATA: { [localKey: string]: keyof UserData } = {
-    [gordo_ls_key]: "found_gordos",
-    [locked_door_ls_key]: "found_locked_doors",
-    [map_node_ls_key]: "found_map_nodes",
-    [research_drone_ls_key]: "found_research_drones",
-    [treasure_pod_ls_key]: "found_treasure_pods",
-    [stabilizing_gate_ls_key]: "found_stabilizing_gates",
-    [shadow_door_ls_key]: "found_shadow_doors",
-};
-
-export async function importFoundFile(file: File, setFound?: React.Dispatch<React.SetStateAction<UserData | any>>) {
-    const text = await file.text();
-    const parsed = JSON.parse(text);
-    if (!isValidFoundExport(parsed)) throw new Error("Invalid found data format.");
-
-    // Persist uploaded data to localStorage. Accept either a combined backup
-    // structure or a flat map of found keys.
-    if (parsed.plots || parsed.pins || parsed.found) {
-        if (parsed.plots) localStorage.setItem(PLOT_KEY, JSON.stringify(parsed.plots));
-        if (parsed.pins) localStorage.setItem(PINS_KEY, JSON.stringify(parsed.pins));
-        if (parsed.found) {
-            for (const k of FOUND_KEYS) {
-                if (parsed.found[k] !== undefined) localStorage.setItem(k, JSON.stringify(parsed.found[k]));
-            }
-        }
-    } else {
-        for (const k of FOUND_KEYS) {
-            if (parsed[k] !== undefined) localStorage.setItem(k, JSON.stringify(parsed[k]));
-        }
-    }
-
-    if (typeof setFound === "function") {
-        try {
-            const partial: Partial<UserData> = {};
-            const source = parsed.found ?? parsed;
-
-            for (const localKey of FOUND_KEYS) {
-                if ((source as any)[localKey] !== undefined) {
-                    const prop = LOCAL_TO_USERDATA[localKey];
-                    if (prop) (partial[prop] as any) = (source as any)[localKey];
-                }
-            }
-
-            // If source already used UserData property names, copy those too
-            const userDataProps = Object.values(LOCAL_TO_USERDATA) as string[];
-            for (const k of Object.keys(source)) {
-                if (userDataProps.includes(k)) (partial as any)[k] = (source as any)[k];
-            }
-
-            setFound((prev: any) => ({ ...(prev ?? {}), ...partial }));
-        } catch {
-            window.location.reload();
-        }
-    } else {
-        window.location.reload();
-    }
+    window.location.reload();
 }
 
 /* --- Clear functions --- */
-export function clearPlots(setPlotData?: React.Dispatch<React.SetStateAction<LocalStorageSitePlan[]>>) {
+function clearPlots(setPlotData?: React.Dispatch<React.SetStateAction<LocalStorageSitePlan[]>>) {
     localStorage.setItem(PLOT_KEY, JSON.stringify([]));
     if (typeof setPlotData === "function") setPlotData([]);
     else window.location.reload();
 }
 
-export function clearPins(setUserPins?: React.Dispatch<React.SetStateAction<LocalStoragePin[]>>) {
+function clearPins(setUserPins?: React.Dispatch<React.SetStateAction<LocalStoragePin[]>>) {
     localStorage.setItem(PINS_KEY, JSON.stringify([]));
     if (typeof setUserPins === "function") setUserPins([]);
     else window.location.reload();
 }
 
-export function clearFound(setFound?: React.Dispatch<React.SetStateAction<UserData | any>>) {
+function clearFound() {
+    const { setFound } = useContext(FoundContext);
     for (const k of FOUND_KEYS) localStorage.setItem(k, JSON.stringify([]));
-    if (typeof setFound === "function") {
-        setFound((prev: any) => ({
-            ...(prev ?? {}),
-            found_gordos: [],
-            found_locked_doors: [],
-            found_map_nodes: [],
-            found_research_drones: [],
-            found_treasure_pods: [],
-            found_stabilizing_gates: [],
-            found_shadow_doors: [],
-        }));
-    } else {
-        window.location.reload();
-    }
+    setFound((prev: Found) => ({
+        ...(prev ?? {}),
+        found_gordos: [],
+        found_locked_doors: [],
+        found_map_nodes: [],
+        found_research_drones: [],
+        found_treasure_pods: [],
+        found_stabilizing_gates: [],
+        found_shadow_doors: [],
+    }));
 }
 
-export function clearAll(setPlotData?: React.Dispatch<React.SetStateAction<LocalStorageSitePlan[]>>, setUserPins?: React.Dispatch<React.SetStateAction<LocalStoragePin[]>>, setFound?: React.Dispatch<React.SetStateAction<any>>) {
-    clearPlots(setPlotData);
-    clearPins(setUserPins);
-    clearFound(setFound);
+function clearFilter(filter: DataSet[]) {
+    if (filter.includes(DataSet.Plots)) clearPlots();
+    if (filter.includes(DataSet.Pins)) clearPins();
+    if (filter.includes(DataSet.Found)) clearFound();
 }
 
 export function MapUserPins({
@@ -240,88 +156,80 @@ export function MapUserPins({
     return null;
 }
 
-export default function GenericDataButton({
+function actionToIcon(action: "export" | "import" | "clear") {
+    switch (action) {
+        case "export":
+            return <FaFileImport />;
+        case "import":
+            return <FaFileExport />;
+        case "clear":
+            return <FaTrashCan />;
+    }
+}
+
+function datasetToString(dataset: DataSet[]): string {
+    return dataset.slice(0, -1).map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(", ")
+        + " and " + dataset.slice(-1).map(d => d.charAt(0).toUpperCase() + d.slice(1)).join("");
+}
+
+export function GenericDataButton({
     dataset,
     action,
-    setPlotData,
-    setUserPins,
-    setFound,
     label
 }: {
-    dataset: "plots" | "pins" | "found" | "all",
+    dataset: DataSet[],
     action: "export" | "import" | "clear",
-    setPlotData?: React.Dispatch<React.SetStateAction<LocalStorageSitePlan[]>>,
-    setUserPins?: React.Dispatch<React.SetStateAction<LocalStoragePin[]>>,
-    setFound?: React.Dispatch<React.SetStateAction<UserData | any>>,
     label?: string
 }) {
-    const text = label ?? `${action.toUpperCase()} ${dataset.toUpperCase()}`;
+    const text = (<span className="flex flex-row gap-2 content-center">{actionToIcon(action)} {label ?? `${action.toUpperCase()}`}</span>);
 
-     if (action === "import") {
-         // render file input
-         const accept = ".json";
-         return (
-             <label className="flex justify-center items-center w-full cursor-pointer bg-btn outline outline-1 p-1 text-center">
-                 <span>{text}</span>
-                 <input
-                     type="file"
-                     accept={accept}
-                     className="hidden"
-                     onChange={async (e) => {
-                         const file = (e.target.files ?? [])[0];
-                         if (!file) return;
-                         try {
-                             if (!window.confirm(`This will overwrite current ${dataset}. Continue?`)) return;
-                             if (dataset === "plots") await importPlotsFile(file, setPlotData);
-                             else if (dataset === "pins") await importPinsFile(file, setUserPins);
-                             else if (dataset === "found") await importFoundFile(file, setFound);
-                             else if (dataset === "all") {
-                                 const text = await file.text();
-                                 const parsed = JSON.parse(text);
-                                 if (parsed.plots) localStorage.setItem(PLOT_KEY, JSON.stringify(parsed.plots));
-                                 if (parsed.pins) localStorage.setItem(PINS_KEY, JSON.stringify(parsed.pins));
-                                 if (parsed.found) {
-                                     for (const k of FOUND_KEYS) if (parsed.found[k]) localStorage.setItem(k, JSON.stringify(parsed.found[k]));
-                                 }
-                                 // try setters, otherwise reload
-                                 if (typeof setPlotData === "function" && parsed.plots) try { setPlotData(parsed.plots); } catch {}
-                                 if (typeof setUserPins === "function" && parsed.pins) try { setUserPins(parsed.pins); } catch {}
-                                 if (typeof setFound === "function" && parsed.found) try { setFound((prev: any) => ({ ...prev, ...parsed.found })); } catch {}
-                                 window.location.reload();
-                             }
-                         } catch (err) {
-                             console.error("Import failed:", err);
-                             window.alert("Import failed. Check console for details.");
-                         }
-                     }}
-                 />
-             </label>
-         );
-     }
+    if (action === "import") {
+        return (
+            <label className="flex justify-center items-center w-full cursor-pointer bg-btn outline outline-1 p-1 text-center">
+                <span>{text}</span>
+                <input
+                    type="file"
+                    accept=".json"
+                    className="hidden"
+                    onChange={async (e) => {
+                        const file = (e.target.files ?? [])[0];
+                        if (!file) return;
+                        try {
+                            if (!window.confirm(`This will overwrite current ${dataset}. Continue?`)) return;
+                            importFilter(file, dataset);
+                        } catch (err) {
+                            console.error("Import failed:", err);
+                            window.alert("Import failed. Check console for details.");
+                        }
+                    }}
+                />
+            </label>
+        );
+    }
 
-     // non-import actions
-     return (
-         <button
-             className="bg-btn w-full outline outline-1 p-1"
-             onClick={() => {
-                 if (action === "export") {
-                     if (dataset === "plots") exportPlots();
-                     else if (dataset === "pins") exportPins();
-                     else if (dataset === "found") exportFoundData();
-                     else if (dataset === "all") exportAll();
-                     else console.error("Unknown dataset for export:", dataset);
-                     return;
-                 }
+    if (action === "export") return (
+        <button
+            disabled={dataset.length === 0}
+            className="bg-btn w-full outline outline-1 p-1"
+            onClick={() => {
+                if (action === "export")
+                    exportFilter(dataset);
+            }}
+        >
+            {text}
+        </button>
+    );
 
-                 // clear
-                 if (!window.confirm(`Are you sure you want to clear ${dataset}? This cannot be undone.`)) return;
-                 if (dataset === "plots") clearPlots(setPlotData);
-                 else if (dataset === "pins") clearPins(setUserPins);
-                 else if (dataset === "found") clearFound(setFound);
-                 else clearAll(setPlotData, setUserPins, setFound);
-             }}
-         >
-             {text}
-         </button>
-     );
+    return (
+        <button
+            disabled={dataset.length === 0}
+            className="bg-btn btn-red w-full outline outline-1 p-1"
+            onClick={() => {
+                if (window.confirm(`Are you sure you want to clear ${datasetToString(dataset)}? This cannot be undone.`))
+                    clearFilter(dataset);
+            }}
+        >
+            {text}
+        </button>
+    );
 }
